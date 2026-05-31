@@ -15,7 +15,7 @@
  * @contract
  *   assertions:
  *     purity: mutates
- *     state_ownership: [_idleTimer]
+ *     state_ownership: [_idleTimer, _enabled]
  *     external_io: [/api/plugins/securityze/lock, DOM, localStorage]
  */
 
@@ -23,9 +23,11 @@ import { getRequestHeaders } from '../../../../script.js';
 
 const MODULE       = 'Securityze';
 const TIMEOUT_KEY  = 'securityze_timeout_minutes';
+const ENABLED_KEY  = 'securityze_enabled';
 const DEFAULT_MINS = 5;
 
 let _idleTimer = null;
+let _enabled   = localStorage.getItem(ENABLED_KEY) !== 'false';
 
 // ─── Timer ────────────────────────────────────────────────────────────────────
 
@@ -35,7 +37,7 @@ function getTimeoutMs() {
 
 function resetIdleTimer() {
     clearTimeout(_idleTimer);
-    _idleTimer = setTimeout(lock, getTimeoutMs());
+    if (_enabled) _idleTimer = setTimeout(lock, getTimeoutMs());
 }
 
 function bindActivityEvents() {
@@ -74,16 +76,31 @@ function injectSettings() {
                     <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
                 </div>
                 <div class="inline-drawer-content">
-                    <label class="securityze-timeout-label">
+                    <label class="securityze-toggle-label">
+                        <input type="checkbox" id="securityze-enabled" ${_enabled ? 'checked' : ''} />
+                        Enable idle lock
+                    </label>
+                    <label class="securityze-timeout-label ${_enabled ? '' : 'securityze-disabled'}">
                         Lock after
-                        <input type="number" id="securityze-timeout" value="${mins}" min="1" max="120" />
+                        <input type="number" id="securityze-timeout" value="${mins}" min="1" max="120" ${_enabled ? '' : 'disabled'} />
                         minutes of inactivity
                     </label>
                 </div>
             </div>
         </div>
     `);
-    document.getElementById('securityze-timeout')?.addEventListener('change', e => {
+
+    document.getElementById('securityze-enabled').addEventListener('change', e => {
+        _enabled = e.target.checked;
+        localStorage.setItem(ENABLED_KEY, String(_enabled));
+        const timeoutLabel = document.querySelector('.securityze-timeout-label');
+        const timeoutInput = document.getElementById('securityze-timeout');
+        timeoutLabel.classList.toggle('securityze-disabled', !_enabled);
+        timeoutInput.disabled = !_enabled;
+        _enabled ? resetIdleTimer() : clearTimeout(_idleTimer);
+    });
+
+    document.getElementById('securityze-timeout').addEventListener('change', e => {
         const v = parseInt(e.target.value);
         if (v > 0) {
             localStorage.setItem(TIMEOUT_KEY, String(v));
@@ -98,5 +115,5 @@ jQuery(async () => {
     bindActivityEvents();
     resetIdleTimer();
     injectSettings();
-    console.log(`[${MODULE}] Initialized — timeout: ${getTimeoutMs() / 60_000} min`);
+    console.log(`[${MODULE}] Initialized — timeout: ${getTimeoutMs() / 60_000} min, enabled: ${_enabled}`);
 });
