@@ -40,6 +40,21 @@ const RELAY_KEY        = 'securityze_locked_on_unload';
 const ACTIVITY_KEY     = 'securityze_last_activity';
 const DEFAULT_MINS     = 5;
 
+// Paint an immediate black cover synchronously if a stale session is likely,
+// before ST renders anything. Removed during init if not needed.
+(function earlyBlind() {
+    if (localStorage.getItem(ENABLED_KEY) === 'false') return;
+    const last = parseInt(localStorage.getItem(ACTIVITY_KEY));
+    if (!last) return;
+    const mins    = parseInt(localStorage.getItem(TIMEOUT_KEY)) || DEFAULT_MINS;
+    const timeout = mins * 60_000;
+    if (Date.now() - last <= timeout) return;
+    const cover = document.createElement('div');
+    cover.id = 'securityze-early-cover';
+    cover.style.cssText = 'position:fixed;inset:0;z-index:99998;background:#000;';
+    document.body.appendChild(cover);
+}());
+
 let _locked      = false;
 let _idleTimer   = null;
 let _enabled     = localStorage.getItem(ENABLED_KEY) !== 'false';
@@ -295,9 +310,13 @@ jQuery(async () => {
 
     if (_enabled && isStaleSession()) {
         dbg('Stale session detected on load — locking immediately.');
+        document.getElementById('securityze-early-cover')?.remove();
         await lock();
         return;
     }
+
+    // Not stale — remove the early cover if it was painted
+    document.getElementById('securityze-early-cover')?.remove();
 
     SlashCommandParser.addCommandObject(SlashCommand.fromProps({
         name: 'szlock',
