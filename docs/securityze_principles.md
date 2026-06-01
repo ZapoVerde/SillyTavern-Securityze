@@ -9,54 +9,50 @@ A principle is an enduring statement of design intent. It says what must be true
 
 ---
 
-## 1. The Lock Is Real Logout, Not an Overlay
+## 1. The Lock Is a UI Gate Backed by Real Auth
 
-Securityze is an inactivity guard that performs genuine server-side logout. It is not a visual overlay, not a client-side gate, and not a replacement for ST's own authentication. Its job is to terminate the session when the user walks away.
+Securityze is a convenience lock. Its job is to stop casual access when the user walks away from an open tab. It is not a replacement for ST's own authentication, network security, or server hardening.
 
-This means:
-- `enableUserAccounts: true` in ST's config.yaml is a hard requirement. Without it, logout is a no-op (the server re-populates `request.user` from the default user on every request).
-- The default user **must have a password set**. Without a password, ST's auto-login will bypass the lock on the next page load.
-- The lock must never claim to be more than it is. A determined actor can still refresh before the timer fires. The extension deters the unintentional, not the intentional.
+The lock works by covering the screen with an overlay and requiring the account password to dismiss it. The session stays alive underneath — the page does not reload on unlock. This is intentional: the UX cost of a full reload is not justified for the threat model (casual access), and the password requirement provides genuine authentication.
+
+The lock must never claim to be more than it is. A determined actor with dev tools can remove DOM elements. The extension deters the unintentional, not the intentional.
+
+Requirements that cannot be relaxed:
+- `enableUserAccounts: true` in ST's config.yaml. Without it there is no real auth and the lock is meaningless.
+- A password on the default user. Without one, ST auto-logs in on every page load and bypasses the lock entirely.
 
 ---
 
-## 2. Lock Calls the Plugin Endpoint, Not the Browser API
+## 2. Unlock Verifies via the Login Endpoint
 
-When the idle timer fires, the extension POSTs to `/api/plugins/securityze/lock`. This endpoint destroys `req.session` (which clears the signed cookie-session cookie) and returns 204. The client then navigates to `/?noauto=true`.
+Unlock calls `POST /api/users/login` with the current user's handle and the entered password. A successful response confirms the credentials are correct; the overlay is then dismissed and the idle timer resets.
 
 This is intentional:
-- Server-side destruction of the session is the authoritative action. If it succeeds, the session is dead.
-- The redirect to `/?noauto=true` suppresses ST's single-user auto-login so the real login page is shown.
-- If the POST fails (network error), the redirect still happens as best-effort.
-
-The `/api/users/logout` endpoint exists and does the same thing, but routing through the plugin's dedicated `/lock` endpoint keeps the Securityze concern explicit and extensible.
+- The login endpoint is rate-limited by ST, so brute-force protection comes for free.
+- The session remains valid throughout, so no CSRF token invalidation occurs.
+- There is no dedicated password-verify endpoint needed.
 
 ---
 
-## 3. Re-authentication Goes Through ST's Login Page
+## 3. F5 While Locked Goes Through Real Logout
 
-There is no overlay, no password input, and no unlock flow in this extension. When the session is locked, the user sees ST's real login page and must enter their password there.
+If the user reloads or closes the tab while locked, a sessionStorage relay fires. On the next page load, the relay detects the flag, calls `POST /api/users/logout` to destroy the session server-side, and redirects to `/?noauto=true` (ST's login page).
 
-This is intentional. ST's login page is rate-limited. The extension does not need to duplicate that logic.
+This is the only server-side action the extension takes proactively. Everything else is client-side. The relay is the contract that closes the "F5 bypass" gap without requiring the session to be destroyed on every lock.
 
 ---
 
-## 4. The Plugin and Extension Are One Feature
+## 4. Extension Only — No Server Plugin
 
-Securityze consists of two parts: a client-side extension (`index.js`) and a server-side plugin (`plugin/index.js`). They are co-located in the same extension directory and symlinked into `st-plugins/` following the same pattern as CNZ/Canonize.
-
-The client owns: the idle timer, activity event binding, and the settings panel UI.
-The server plugin owns: the `/lock` route that destroys the session cookie.
-
-If either half grows beyond its stated scope, that is a signal to reconsider the split.
+Securityze is a single client-side extension. It has no server plugin. Password setup is done once via ST's admin panel. This keeps the extension installable via ST's standard extension manager with no additional steps.
 
 ---
 
 ## 5. No Opinions About ST State
 
-The extension does not read chat state, character state, or any ST-internal data beyond what `getRequestHeaders()` provides. It does not listen to ST event types. It does not care what the user was doing when the timer fired.
+The extension does not read chat state, character state, or any ST-internal data beyond what `getRequestHeaders()` and `getCurrentUserHandle()` provide. It does not listen to ST event types. It does not care what the user was doing when the timer fired.
 
-This constraint keeps the extension resilient to ST version changes and makes its behavior predictable regardless of what the user is doing in the app.
+This constraint keeps the extension resilient to ST version changes and makes its behaviour predictable regardless of what the user is doing in the app.
 
 ---
 
