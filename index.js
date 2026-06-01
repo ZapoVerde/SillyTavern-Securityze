@@ -121,7 +121,7 @@ async function lock() {
     if (_fullLogout) {
         await doLogout();
     } else {
-        sessionStorage.setItem(RELAY_KEY, '1');
+        sessionStorage.setItem(RELAY_KEY, String(Date.now()));
         renderOverlay();
     }
 }
@@ -165,12 +165,10 @@ async function attemptUnlock() {
             body:    JSON.stringify({ handle: getCurrentUserHandle(), password: pw }),
         });
         if (res.ok) {
-            _locked = false;
-            sessionStorage.removeItem(RELAY_KEY);
             localStorage.setItem(ACTIVITY_KEY, String(Date.now()));
-            _overlay?.remove();
-            _overlay = null;
-            resetIdleTimer();
+            sessionStorage.removeItem(RELAY_KEY);
+            window.location.reload();
+            return;
         } else {
             errEl.textContent = 'Incorrect password.';
             pwEl.value = '';
@@ -187,13 +185,21 @@ async function attemptUnlock() {
 
 function bindUnloadRelay() {
     window.addEventListener('beforeunload', () => {
-        if (_locked) sessionStorage.setItem(RELAY_KEY, '1');
+        if (_locked) sessionStorage.setItem(RELAY_KEY, String(Date.now()));
     });
 }
 
 async function checkUnloadRelay() {
-    if (!sessionStorage.getItem(RELAY_KEY)) return;
+    const relayTime = parseInt(sessionStorage.getItem(RELAY_KEY));
     sessionStorage.removeItem(RELAY_KEY);
+    if (!relayTime) return;
+    // Ignore stale relay flags — mobile browsers can restore sessionStorage
+    // from a previous tab session, causing a spurious logout on fresh nav.
+    const age = Date.now() - relayTime;
+    if (age > 60 * 60 * 1000) {
+        dbg('Relay flag too old (' + Math.round(age / 60000) + ' min), ignoring.');
+        return;
+    }
     await doLogout();
 }
 
