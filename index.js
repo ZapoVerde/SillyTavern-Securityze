@@ -37,6 +37,7 @@ const ENABLED_KEY      = 'securityze_enabled';
 const FULL_LOGOUT_KEY  = 'securityze_full_logout';
 const VERBOSE_KEY      = 'securityze_verbose';
 const RELAY_KEY        = 'securityze_locked_on_unload';
+const ACTIVITY_KEY     = 'securityze_last_activity';
 const DEFAULT_MINS     = 5;
 
 let _locked      = false;
@@ -61,10 +62,23 @@ function resetIdleTimer() {
     if (_enabled) _idleTimer = setTimeout(lock, getTimeoutMs());
 }
 
+function recordActivity() {
+    localStorage.setItem(ACTIVITY_KEY, String(Date.now()));
+    if (!_locked) resetIdleTimer();
+}
+
 function bindActivityEvents() {
     for (const ev of ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click']) {
-        window.addEventListener(ev, () => { if (!_locked) resetIdleTimer(); }, { passive: true });
+        window.addEventListener(ev, recordActivity, { passive: true });
     }
+}
+
+function isStaleSession() {
+    const last = parseInt(localStorage.getItem(ACTIVITY_KEY));
+    if (!last) return false;
+    const elapsed = Date.now() - last;
+    dbg('Time since last activity:', Math.round(elapsed / 1000), 's, timeout:', getTimeoutMs() / 1000, 's');
+    return elapsed > getTimeoutMs();
 }
 
 // ─── Logout ───────────────────────────────────────────────────────────────────
@@ -277,6 +291,12 @@ jQuery(async () => {
     if (!pwSet) {
         _enabled = false;
         console.warn(`[${MODULE}] No password set on account — lock disabled.`);
+    }
+
+    if (_enabled && isStaleSession()) {
+        dbg('Stale session detected on load — locking immediately.');
+        await lock();
+        return;
     }
 
     SlashCommandParser.addCommandObject(SlashCommand.fromProps({
