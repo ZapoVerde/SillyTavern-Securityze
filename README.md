@@ -66,8 +66,17 @@ Open **Extensions → Securityze** in the ST UI.
 |---|---|---|
 | Enable idle lock | Turns the lock on or off without uninstalling | On |
 | Lock after N minutes | How long before the lock activates | 5 minutes |
+| Full logout on lock | Controls what happens when the lock triggers — see below | Off |
 
 The timeout resets on any mouse, keyboard, touch, scroll, or click event. Settings are stored in `localStorage` per browser, so each device can have a different timeout.
+
+### Lock modes
+
+**Overlay (default)** — The session stays alive and an in-page password prompt covers the screen. Unlocking is instant with no page reload. The tradeoff is that the session remains active while locked, so someone who knows to open a new tab and navigate directly could still access ST without going through the overlay.
+
+**Full logout** — The session is destroyed when the lock triggers and the browser is redirected to ST's login page. Secure against direct URL access while locked; re-authentication requires a full page reload.
+
+Choose based on your threat model. For casual privacy (someone walks up to your screen) the overlay is sufficient and much faster. If you need stronger guarantees, use full logout.
 
 You can also lock immediately at any time by typing `/szlock` in the chat input.
 
