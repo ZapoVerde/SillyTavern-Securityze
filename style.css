@@ -1,3 +1,30 @@
+#securityze-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    backdrop-filter: blur(calc(var(--SmartThemeBlurStrength) * 2));
+    -webkit-backdrop-filter: blur(calc(var(--SmartThemeBlurStrength) * 2));
+    background-color: var(--black30a);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#securityze-dialog {
+    width: 500px;
+    max-width: 90vw;
+    box-shadow: 0px 0px 14px var(--black70a);
+    border: 1px solid var(--SmartThemeBorderColor);
+    padding: 4px;
+    background-color: var(--SmartThemeBlurTintColor);
+    border-radius: 10px;
+}
+
+.securityze-inner {
+    gap: 0.75rem;
+    padding: 1rem;
+}
+
 .securityze-toggle-label {
     display: flex;
     align-items: center;
