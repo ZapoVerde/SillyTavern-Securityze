@@ -1,64 +1,75 @@
 # SillyTavern-Securityze
 
-Inactivity lock for SillyTavern. After a configurable period of no mouse, keyboard, or touch activity, a full-screen overlay appears requiring your account password. The session stays alive underneath — on unlock the page continues exactly where it left off, no reload.
+SillyTavern has no built-in inactivity timeout. If you walk away from an open tab, anyone who finds it can read your chats. Securityze fixes that by locking the screen after a period of inactivity and requiring your account password to continue.
 
-F5 or tab close while locked triggers a real server-side logout, landing on ST's login page.
+---
+
+## Login vs Lock Screen
+
+These are two different things and Securityze uses both.
+
+**Login screen** — ST's own login page, shown when there is no active session. This is what you see when you first open ST, or after a real logout.
+
+![ST login screen](docs/Login.png)
+
+**Lock screen** — Securityze's overlay. Shown after idle timeout while you are already logged in. The session stays alive underneath; the page does not reload. On unlock, you continue exactly where you left off.
+
+![Securityze lock screen](docs/Locked%20screen.png)
+
+If you press F5 or close the tab while locked, the session is terminated server-side and you land on the login screen instead.
 
 ---
 
 ## Requirements
 
-Two settings must be enabled in ST's `config.yaml`:
+**1. User accounts must be enabled** in `config.yaml`:
 
 ```yaml
 enableUserAccounts: true
-enableServerPlugins: false   # not required — no plugin needed
 ```
 
-**`enableUserAccounts: true` is mandatory.** Without it ST has no real auth, logout is a no-op, and the lock does nothing.
+Without this, ST has no real authentication. Logout is a no-op and the lock does nothing.
 
-**The default user must have a password set.** Without one, ST auto-logs in on every page load, bypassing the lock entirely. Set it via:
+**2. Your account must have a password set.** Without a password, ST auto-logs in on every page load, bypassing the lock entirely.
 
-> User Settings (person icon) → Admin Panel → your user → Change Password
+Open User Settings via the person icon in the top bar, then click **Admin Panel**:
+
+![User Settings bar](docs/Account.png)
+
+Click your user to open Account Info, then **Change Password**:
+
+![Account settings panel](docs/AccountSettings.png)
+
+Enter and confirm your new password:
+
+![Change password dialog](docs/resetPW.png)
 
 ---
 
 ## Installation
 
-Via ST's built-in extension manager, or clone manually into your extensions directory:
+In ST, open Extensions → Manage Extensions → Install from URL. Enter:
 
 ```
-[ST]/public/scripts/extensions/third-party/SillyTavern-Securityze/
+https://github.com/ZapoVerde/SillyTavern-Securityze
 ```
 
-No server plugin. No `npm install`. No extra setup beyond the config changes above.
+![Extension install dialog](docs/installation.png)
+
+No server plugin. No `npm install`. No extra configuration beyond the two requirements above.
 
 ---
 
 ## Configuration
 
-Open **Extensions > Securityze** in the ST UI:
+Open **Extensions → Securityze** in the ST UI.
 
-- **Enable idle lock** — toggle the lock on/off without uninstalling
-- **Lock after N minutes** — idle timeout (default 5, range 1–120). Stored in `localStorage` per browser.
+| Setting | Description | Default |
+|---|---|---|
+| Enable idle lock | Turns the lock on or off without uninstalling | On |
+| Lock after N minutes | How long before the lock activates | 5 minutes |
 
----
-
-## How it works
-
-- Idle timer resets on any mouse, keyboard, touch, scroll, or click event
-- On timeout: full-screen black overlay with a password prompt appears
-- **Correct password** → overlay dismissed, timer resets, session continues
-- **Wrong password** → error shown, try again (rate-limited server-side by ST)
-- **F5 / reload while locked** → sessionStorage relay fires, real server-side logout, ST login page
-
----
-
-## Security scope
-
-Securityze is a convenience lock. It stops casual access when you walk away from an open tab. It is not a replacement for network security, HTTPS, or server hardening.
-
-Sessions are per-browser — being logged in on one device does not grant access on another.
+The timeout resets on any mouse, keyboard, touch, scroll, or click event. Settings are stored in `localStorage` per browser, so each device can have a different timeout.
 
 ---
 
