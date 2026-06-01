@@ -73,6 +73,19 @@ The timeout resets on any mouse, keyboard, touch, scroll, or click event. Settin
 
 ---
 
+## Locked Out?
+
+If you forget your password, use ST's built-in recovery flow:
+
+1. On the login screen, click your user account to get to the password prompt
+2. Click **Forgot password?**
+3. A recovery code is posted to your **server console** (terminal or Docker logs)
+4. Enter the code and your new password to regain access
+
+The recovery code only appears in the server console — someone who only has browser access cannot use this flow.
+
+---
+
 ## License
 
 AGPL-3.0 — see [LICENSE](LICENSE)
