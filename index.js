@@ -163,7 +163,7 @@ function injectSettings(pwSet = true) {
                     <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
                 </div>
                 <div class="inline-drawer-content">
-                    ${!pwSet ? `<div class="securityze-no-pw-warning">No password set on this account. Set one via User Settings &rarr; Admin Panel before enabling.</div>` : ''}
+                    ${!pwSet ? `<div class="securityze-no-pw-warning">Securityze requires user accounts to be enabled in config.yaml (<code>enableUserAccounts: true</code>) and a password set on this account (User Settings &rarr; Admin Panel).</div>` : ''}
                     <label class="securityze-toggle-label ${!pwSet ? 'securityze-disabled' : ''}">
                         <input type="checkbox" id="securityze-enabled" ${_enabled ? 'checked' : ''} ${!pwSet ? 'disabled' : ''} />
                         Enable idle lock
