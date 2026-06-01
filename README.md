@@ -69,6 +69,8 @@ Open **Extensions → Securityze** in the ST UI.
 
 The timeout resets on any mouse, keyboard, touch, scroll, or click event. Settings are stored in `localStorage` per browser, so each device can have a different timeout.
 
+You can also lock immediately at any time by typing `/szlock` in the chat input.
+
 ---
 
 ## Locked Out?
