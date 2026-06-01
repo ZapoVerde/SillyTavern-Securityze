@@ -151,7 +151,7 @@ async function checkUnloadRelay() {
 
 // ─── Settings panel ───────────────────────────────────────────────────────────
 
-function injectSettings() {
+function injectSettings(pwSet = true) {
     const container = document.getElementById('extensions_settings');
     if (!container) return;
     const mins = parseInt(localStorage.getItem(TIMEOUT_KEY)) || DEFAULT_MINS;
@@ -163,8 +163,9 @@ function injectSettings() {
                     <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
                 </div>
                 <div class="inline-drawer-content">
-                    <label class="securityze-toggle-label">
-                        <input type="checkbox" id="securityze-enabled" ${_enabled ? 'checked' : ''} />
+                    ${!pwSet ? `<div class="securityze-no-pw-warning">No password set on this account. Set one via User Settings &rarr; Admin Panel before enabling.</div>` : ''}
+                    <label class="securityze-toggle-label ${!pwSet ? 'securityze-disabled' : ''}">
+                        <input type="checkbox" id="securityze-enabled" ${_enabled ? 'checked' : ''} ${!pwSet ? 'disabled' : ''} />
                         Enable idle lock
                     </label>
                     <label class="securityze-timeout-label ${_enabled ? '' : 'securityze-disabled'}">
@@ -196,13 +197,33 @@ function injectSettings() {
     });
 }
 
+// ─── Password check ───────────────────────────────────────────────────────────
+
+async function hasPasswordSet() {
+    try {
+        const res = await fetch('/api/users/me', { headers: getRequestHeaders() });
+        if (!res.ok) return true; // assume set if we can't check
+        const data = await res.json();
+        return !!data.password;
+    } catch (_) {
+        return true; // assume set on network error
+    }
+}
+
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
 jQuery(async () => {
     await checkUnloadRelay();
+
+    const pwSet = await hasPasswordSet();
+    if (!pwSet) {
+        _enabled = false;
+        console.warn(`[${MODULE}] No password set on account — lock disabled.`);
+    }
+
     bindActivityEvents();
     bindUnloadRelay();
     resetIdleTimer();
-    injectSettings();
+    injectSettings(pwSet);
     console.log(`[${MODULE}] Initialized — timeout: ${getTimeoutMs() / 60_000} min, enabled: ${_enabled}`);
 });

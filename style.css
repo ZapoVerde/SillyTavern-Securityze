@@ -25,6 +25,12 @@
     padding: 1rem;
 }
 
+.securityze-no-pw-warning {
+    color: var(--warning-color, #e0a030);
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+}
+
 .securityze-toggle-label {
     display: flex;
     align-items: center;
