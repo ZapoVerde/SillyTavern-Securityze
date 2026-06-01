@@ -25,6 +25,8 @@
 
 import { getRequestHeaders } from '../../../../script.js';
 import { getCurrentUserHandle } from '../../../../scripts/user.js';
+import { SlashCommandParser } from '../../../../scripts/slash-commands/SlashCommandParser.js';
+import { SlashCommand } from '../../../../scripts/slash-commands/SlashCommand.js';
 
 const MODULE       = 'Securityze';
 const TIMEOUT_KEY  = 'securityze_timeout_minutes';
@@ -220,6 +222,12 @@ jQuery(async () => {
         _enabled = false;
         console.warn(`[${MODULE}] No password set on account — lock disabled.`);
     }
+
+    SlashCommandParser.addCommandObject(SlashCommand.fromProps({
+        name: 'lock',
+        callback: () => { lock(); return ''; },
+        helpString: 'Lock the session immediately.',
+    }));
 
     bindActivityEvents();
     bindUnloadRelay();
