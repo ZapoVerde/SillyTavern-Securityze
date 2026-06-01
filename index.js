@@ -224,9 +224,9 @@ jQuery(async () => {
     }
 
     SlashCommandParser.addCommandObject(SlashCommand.fromProps({
-        name: 'lock',
+        name: 'szlock',
         callback: () => { lock(); return ''; },
-        helpString: 'Lock the session immediately.',
+        helpString: 'Lock the session immediately (Securityze).',
     }));
 
     bindActivityEvents();
