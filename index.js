@@ -35,6 +35,7 @@ const MODULE           = 'Securityze';
 const TIMEOUT_KEY      = 'securityze_timeout_minutes';
 const ENABLED_KEY      = 'securityze_enabled';
 const FULL_LOGOUT_KEY  = 'securityze_full_logout';
+const VERBOSE_KEY      = 'securityze_verbose';
 const RELAY_KEY        = 'securityze_locked_on_unload';
 const DEFAULT_MINS     = 5;
 
@@ -42,7 +43,12 @@ let _locked      = false;
 let _idleTimer   = null;
 let _enabled     = localStorage.getItem(ENABLED_KEY) !== 'false';
 let _fullLogout  = localStorage.getItem(FULL_LOGOUT_KEY) === 'true';
+let _verbose     = localStorage.getItem(VERBOSE_KEY) === 'true';
 let _overlay     = null;
+
+function dbg(...args) {
+    if (_verbose) console.log(`[${MODULE}]`, ...args);
+}
 
 // ─── Timer ────────────────────────────────────────────────────────────────────
 
@@ -193,6 +199,10 @@ function injectSettings(pwSet = true) {
                             ? 'Session is destroyed on lock. Secure against direct URL access; requires full page reload to re-authenticate.'
                             : 'Session stays alive on lock. Fast unlock with no reload; direct URL access remains possible while locked.'}
                     </div>
+                    <label class="securityze-toggle-label" style="margin-top:0.5rem;">
+                        <input type="checkbox" id="securityze-verbose" ${_verbose ? 'checked' : ''} />
+                        Verbose logging
+                    </label>
                 </div>
             </div>
         </div>
@@ -225,6 +235,13 @@ function injectSettings(pwSet = true) {
         hint.textContent = _fullLogout
             ? 'Session is destroyed on lock. Secure against direct URL access; requires full page reload to re-authenticate.'
             : 'Session stays alive on lock. Fast unlock with no reload; direct URL access remains possible while locked.';
+        dbg('fullLogout set to:', _fullLogout);
+    });
+
+    document.getElementById('securityze-verbose').addEventListener('change', e => {
+        _verbose = e.target.checked;
+        localStorage.setItem(VERBOSE_KEY, String(_verbose));
+        console.log(`[${MODULE}] Verbose logging ${_verbose ? 'enabled' : 'disabled'}.`);
     });
 }
 
@@ -232,11 +249,19 @@ function injectSettings(pwSet = true) {
 
 async function hasPasswordSet() {
     try {
+        dbg('Checking /api/users/me...');
         const res = await fetch('/api/users/me', { headers: getRequestHeaders() });
-        if (!res.ok) return true;
+        dbg('/api/users/me status:', res.status);
+        if (!res.ok) {
+            dbg('Non-OK response — assuming password set');
+            return true;
+        }
         const data = await res.json();
+        dbg('/api/users/me response:', JSON.stringify(data));
+        dbg('password field:', data.password);
         return !!data.password;
-    } catch (_) {
+    } catch (err) {
+        dbg('Error fetching /api/users/me:', err.message);
         return true;
     }
 }
@@ -244,9 +269,11 @@ async function hasPasswordSet() {
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
 jQuery(async () => {
+    dbg('Init starting — enabled:', _enabled, 'fullLogout:', _fullLogout, 'verbose:', _verbose);
     await checkUnloadRelay();
 
     const pwSet = await hasPasswordSet();
+    dbg('hasPasswordSet result:', pwSet);
     if (!pwSet) {
         _enabled = false;
         console.warn(`[${MODULE}] No password set on account — lock disabled.`);
