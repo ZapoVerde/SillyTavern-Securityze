@@ -12,7 +12,7 @@ These are two different things and Securityze uses both.
 
 ![ST login screen](docs/Login.png)
 
-**Lock screen** — Securityze's overlay. Shown after idle timeout while you are already logged in. The session stays alive underneath; the page does not reload. On unlock, you continue exactly where you left off.
+**Lock screen** — Securityze's overlay. Shown after idle timeout while you are already logged in. The session stays alive underneath so the page does not need to reload — a full login reloads all characters, chats, and settings from scratch, which takes time. On unlock you continue exactly where you left off.
 
 ![Securityze lock screen](docs/Locked%20screen.png)
 
@@ -55,8 +55,6 @@ https://github.com/ZapoVerde/SillyTavern-Securityze
 ```
 
 ![Extension install dialog](docs/installation.png)
-
-No server plugin. No `npm install`. No extra configuration beyond the two requirements above.
 
 ---
 
