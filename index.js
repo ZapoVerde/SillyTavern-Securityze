@@ -3,15 +3,18 @@
  * @stamp {"utc":"2026-06-01T00:00:00.000Z"}
  * @architectural-role Stateful Owner
  * @description
- * Inactivity lock for SillyTavern. After N minutes of user inactivity an
- * overlay is shown requiring the account password to continue. The session
- * remains alive while locked so the page does not need to reload on unlock.
+ * Inactivity lock for SillyTavern. Two lock modes selectable per-device:
  *
- * F5/reload while locked is handled via a sessionStorage relay: beforeunload
- * writes a flag, and the next page load reads it and calls server-side logout
- * before rendering, landing on the real ST login page.
+ * Overlay mode (default): session stays alive, in-page password prompt on
+ * timeout, fast unlock with no reload. Session is visible to direct URL access
+ * while locked.
  *
- * Unlock verifies credentials via POST /api/users/login (rate-limited by ST).
+ * Full logout mode: session destroyed on timeout, redirects to ST login page.
+ * Secure against direct URL access while locked; requires full reload on
+ * re-auth.
+ *
+ * F5/reload while overlay-locked is handled via a sessionStorage relay which
+ * calls server-side logout before the page renders.
  *
  * @api-declaration
  * (no exports — self-registers on import)
@@ -19,8 +22,8 @@
  * @contract
  *   assertions:
  *     purity: mutates
- *     state_ownership: [_locked, _idleTimer, _enabled, _overlay]
- *     external_io: [/api/users/login, /api/users/logout, DOM, localStorage, sessionStorage]
+ *     state_ownership: [_locked, _idleTimer, _enabled, _fullLogout, _overlay]
+ *     external_io: [/api/users/me, /api/users/login, /api/users/logout, DOM, localStorage, sessionStorage]
  */
 
 import { getRequestHeaders } from '../../../../script.js';
@@ -28,16 +31,18 @@ import { getCurrentUserHandle } from '../../../../scripts/user.js';
 import { SlashCommandParser } from '../../../../scripts/slash-commands/SlashCommandParser.js';
 import { SlashCommand } from '../../../../scripts/slash-commands/SlashCommand.js';
 
-const MODULE       = 'Securityze';
-const TIMEOUT_KEY  = 'securityze_timeout_minutes';
-const ENABLED_KEY  = 'securityze_enabled';
-const RELAY_KEY    = 'securityze_locked_on_unload';
-const DEFAULT_MINS = 5;
+const MODULE           = 'Securityze';
+const TIMEOUT_KEY      = 'securityze_timeout_minutes';
+const ENABLED_KEY      = 'securityze_enabled';
+const FULL_LOGOUT_KEY  = 'securityze_full_logout';
+const RELAY_KEY        = 'securityze_locked_on_unload';
+const DEFAULT_MINS     = 5;
 
-let _locked    = false;
-let _idleTimer = null;
-let _enabled   = localStorage.getItem(ENABLED_KEY) !== 'false';
-let _overlay   = null;
+let _locked      = false;
+let _idleTimer   = null;
+let _enabled     = localStorage.getItem(ENABLED_KEY) !== 'false';
+let _fullLogout  = localStorage.getItem(FULL_LOGOUT_KEY) === 'true';
+let _overlay     = null;
 
 // ─── Timer ────────────────────────────────────────────────────────────────────
 
@@ -56,7 +61,7 @@ function bindActivityEvents() {
     }
 }
 
-// ─── Logout (relay target) ────────────────────────────────────────────────────
+// ─── Logout ───────────────────────────────────────────────────────────────────
 
 async function doLogout() {
     try {
@@ -72,13 +77,17 @@ async function doLogout() {
 
 // ─── Lock ─────────────────────────────────────────────────────────────────────
 
-function lock() {
+async function lock() {
     if (_locked) return;
     _locked = true;
     clearTimeout(_idleTimer);
     _idleTimer = null;
-    sessionStorage.setItem(RELAY_KEY, '1');
-    renderOverlay();
+    if (_fullLogout) {
+        await doLogout();
+    } else {
+        sessionStorage.setItem(RELAY_KEY, '1');
+        renderOverlay();
+    }
 }
 
 // ─── Overlay ──────────────────────────────────────────────────────────────────
@@ -175,6 +184,15 @@ function injectSettings(pwSet = true) {
                         <input type="number" id="securityze-timeout" value="${mins}" min="1" max="120" ${_enabled ? '' : 'disabled'} />
                         minutes of inactivity
                     </label>
+                    <label class="securityze-toggle-label ${_enabled ? '' : 'securityze-disabled'}">
+                        <input type="checkbox" id="securityze-full-logout" ${_fullLogout ? 'checked' : ''} ${!_enabled ? 'disabled' : ''} />
+                        Full logout on lock
+                    </label>
+                    <div class="securityze-mode-hint">
+                        ${_fullLogout
+                            ? 'Session is destroyed on lock. Secure against direct URL access; requires full page reload to re-authenticate.'
+                            : 'Session stays alive on lock. Fast unlock with no reload; direct URL access remains possible while locked.'}
+                    </div>
                 </div>
             </div>
         </div>
@@ -183,10 +201,12 @@ function injectSettings(pwSet = true) {
     document.getElementById('securityze-enabled').addEventListener('change', e => {
         _enabled = e.target.checked;
         localStorage.setItem(ENABLED_KEY, String(_enabled));
-        const timeoutLabel = document.querySelector('.securityze-timeout-label');
-        const timeoutInput = document.getElementById('securityze-timeout');
+        const timeoutLabel  = document.querySelector('.securityze-timeout-label');
+        const timeoutInput  = document.getElementById('securityze-timeout');
+        const logoutToggle  = document.getElementById('securityze-full-logout');
         timeoutLabel.classList.toggle('securityze-disabled', !_enabled);
-        timeoutInput.disabled = !_enabled;
+        timeoutInput.disabled  = !_enabled;
+        logoutToggle.disabled  = !_enabled;
         _enabled ? resetIdleTimer() : clearTimeout(_idleTimer);
     });
 
@@ -197,6 +217,15 @@ function injectSettings(pwSet = true) {
             resetIdleTimer();
         }
     });
+
+    document.getElementById('securityze-full-logout').addEventListener('change', e => {
+        _fullLogout = e.target.checked;
+        localStorage.setItem(FULL_LOGOUT_KEY, String(_fullLogout));
+        const hint = document.querySelector('.securityze-mode-hint');
+        hint.textContent = _fullLogout
+            ? 'Session is destroyed on lock. Secure against direct URL access; requires full page reload to re-authenticate.'
+            : 'Session stays alive on lock. Fast unlock with no reload; direct URL access remains possible while locked.';
+    });
 }
 
 // ─── Password check ───────────────────────────────────────────────────────────
@@ -204,11 +233,11 @@ function injectSettings(pwSet = true) {
 async function hasPasswordSet() {
     try {
         const res = await fetch('/api/users/me', { headers: getRequestHeaders() });
-        if (!res.ok) return true; // assume set if we can't check
+        if (!res.ok) return true;
         const data = await res.json();
         return !!data.password;
     } catch (_) {
-        return true; // assume set on network error
+        return true;
     }
 }
 
@@ -233,5 +262,5 @@ jQuery(async () => {
     bindUnloadRelay();
     resetIdleTimer();
     injectSettings(pwSet);
-    console.log(`[${MODULE}] Initialized — timeout: ${getTimeoutMs() / 60_000} min, enabled: ${_enabled}`);
+    console.log(`[${MODULE}] Initialized — timeout: ${getTimeoutMs() / 60_000} min, enabled: ${_enabled}, fullLogout: ${_fullLogout}`);
 });
