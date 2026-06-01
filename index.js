@@ -99,6 +99,7 @@ function isStaleSession() {
 // ─── Logout ───────────────────────────────────────────────────────────────────
 
 async function doLogout() {
+    localStorage.removeItem(ACTIVITY_KEY);
     try {
         await fetch('/api/users/logout', {
             method:  'POST',
