@@ -196,7 +196,7 @@ async function checkUnloadRelay() {
     // Ignore stale relay flags — mobile browsers can restore sessionStorage
     // from a previous tab session, causing a spurious logout on fresh nav.
     const age = Date.now() - relayTime;
-    if (age > 60 * 60 * 1000) {
+    if (age > getTimeoutMs()) {
         dbg('Relay flag too old (' + Math.round(age / 60000) + ' min), ignoring.');
         return;
     }
