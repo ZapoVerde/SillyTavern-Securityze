@@ -74,7 +74,7 @@ The timeout resets on any mouse, keyboard, touch, scroll, or click event. Settin
 
 **Overlay (default)** — The session stays alive and an in-page password prompt covers the screen. Unlocking is instant with no page reload. The tradeoff is that the session remains active while locked, so someone who knows to open a new tab and navigate directly could still access ST without going through the overlay.
 
-**Full logout** — The session is destroyed when the lock triggers and the browser is redirected to ST's login page. Secure against direct URL access while locked; re-authentication requires a full page reload.
+**Full logout** — Requires sign-in to resume. The browser is redirected to ST's login page when the lock triggers. Secure against direct URL access while locked.
 
 Choose based on your threat model. For casual privacy (someone walks up to your screen) the overlay is sufficient and much faster. If you need stronger guarantees, use full logout.
 

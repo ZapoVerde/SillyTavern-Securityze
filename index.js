@@ -225,8 +225,8 @@ function injectSettings(pwSet = true) {
                     </label>
                     <div class="securityze-mode-hint">
                         ${_fullLogout
-                            ? 'Session is destroyed on lock. Secure against direct URL access; requires full page reload to re-authenticate.'
-                            : 'Session stays alive on lock. Fast unlock with no reload; direct URL access remains possible while locked.'}
+                            ? 'Requires sign-in to resume. Secure against direct URL access while locked.'
+                            : 'Resumes without sign-in. Fast unlock with no reload; direct URL access remains possible while locked.'}
                     </div>
                     <label class="securityze-toggle-label" style="margin-top:0.5rem;">
                         <input type="checkbox" id="securityze-verbose" ${_verbose ? 'checked' : ''} />
@@ -262,8 +262,8 @@ function injectSettings(pwSet = true) {
         localStorage.setItem(FULL_LOGOUT_KEY, String(_fullLogout));
         const hint = document.querySelector('.securityze-mode-hint');
         hint.textContent = _fullLogout
-            ? 'Session is destroyed on lock. Secure against direct URL access; requires full page reload to re-authenticate.'
-            : 'Session stays alive on lock. Fast unlock with no reload; direct URL access remains possible while locked.';
+            ? 'Requires sign-in to resume. Secure against direct URL access while locked.'
+            : 'Resumes without sign-in. Fast unlock with no reload; direct URL access remains possible while locked.';
         dbg('fullLogout set to:', _fullLogout);
     });
 
