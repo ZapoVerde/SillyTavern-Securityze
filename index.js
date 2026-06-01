@@ -166,6 +166,7 @@ async function attemptUnlock() {
         if (res.ok) {
             _locked = false;
             sessionStorage.removeItem(RELAY_KEY);
+            localStorage.setItem(ACTIVITY_KEY, String(Date.now()));
             _overlay?.remove();
             _overlay = null;
             resetIdleTimer();
@@ -308,25 +309,24 @@ jQuery(async () => {
         console.warn(`[${MODULE}] No password set on account — lock disabled.`);
     }
 
-    if (_enabled && isStaleSession()) {
-        dbg('Stale session detected on load — locking immediately.');
-        document.getElementById('securityze-early-cover')?.remove();
-        await lock();
-        return;
-    }
-
-    // Not stale — remove the early cover if it was painted
-    document.getElementById('securityze-early-cover')?.remove();
-
+    // Always bind before any lock so activity tracking and the unload relay
+    // work even when we lock immediately on load.
     SlashCommandParser.addCommandObject(SlashCommand.fromProps({
         name: 'szlock',
         callback: () => { lock(); return ''; },
         helpString: 'Lock the session immediately (Securityze).',
     }));
-
     bindActivityEvents();
     bindUnloadRelay();
-    resetIdleTimer();
+
+    document.getElementById('securityze-early-cover')?.remove();
+
+    if (_enabled && isStaleSession()) {
+        dbg('Stale session detected on load — locking immediately.');
+        await lock();
+    } else {
+        resetIdleTimer();
+    }
     injectSettings(pwSet);
     console.log(`[${MODULE}] Initialized — timeout: ${getTimeoutMs() / 60_000} min, enabled: ${_enabled}, fullLogout: ${_fullLogout}`);
 });
