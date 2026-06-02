@@ -51,8 +51,8 @@ const DEFAULT_MINS     = 5;
     if (Date.now() - last <= timeout) return;
     const cover = document.createElement('div');
     cover.id = 'securityze-early-cover';
-    cover.style.cssText = 'position:fixed;inset:0;z-index:99998;background:#000;';
-    document.body.appendChild(cover);
+    cover.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;min-height:100dvh;z-index:99998;background:#000;';
+    document.documentElement.appendChild(cover);
 }());
 
 let _locked      = false;
@@ -126,6 +126,14 @@ async function lock() {
     }
 }
 
+function unlock() {
+    _locked = false;
+    _overlay?.remove();
+    _overlay = null;
+    localStorage.setItem(ACTIVITY_KEY, String(Date.now()));
+    resetIdleTimer();
+}
+
 // ─── Overlay ──────────────────────────────────────────────────────────────────
 
 function renderOverlay() {
@@ -135,10 +143,16 @@ function renderOverlay() {
     _overlay.innerHTML = `
         <div id="securityze-dialog">
             <div class="flex-container flexFlowColumn alignItemsCenter securityze-inner">
+                <h2 class="flex-container securityze-logo-block">
+                    <img src="/img/logo.png" alt="SillyTavern" class="securityze-logo">
+                    <span>SillyTavern</span>
+                </h2>
                 <h3>Session Locked</h3>
                 <input type="password" id="securityze-pw" class="text_pole" placeholder="Password" autocomplete="current-password" />
                 <div id="securityze-err" class="neutral_warning"></div>
-                <div id="securityze-btn" class="menu_button">Unlock</div>
+                <div class="flex-container">
+                    <div id="securityze-btn" class="menu_button">Unlock</div>
+                </div>
             </div>
         </div>
     `;
@@ -165,9 +179,8 @@ async function attemptUnlock() {
             body:    JSON.stringify({ handle: getCurrentUserHandle(), password: pw }),
         });
         if (res.ok) {
-            localStorage.setItem(ACTIVITY_KEY, String(Date.now()));
             sessionStorage.removeItem(RELAY_KEY);
-            window.location.reload();
+            unlock();
             return;
         } else {
             errEl.textContent = 'Incorrect password.';
