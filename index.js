@@ -99,6 +99,7 @@ function isStaleSession() {
 // ─── Logout ───────────────────────────────────────────────────────────────────
 
 async function doLogout() {
+    _locked = false; // prevent beforeunload from re-stamping the relay during navigation
     localStorage.removeItem(ACTIVITY_KEY);
     try {
         await fetch('/api/users/logout', {

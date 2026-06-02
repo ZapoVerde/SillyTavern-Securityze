@@ -16,4 +16,18 @@ The problem arose when `attemptUnlock()` called `window.location.reload()` after
 3. Updates `ACTIVITY_KEY` in localStorage
 4. Restarts the idle timer
 
-**What to watch for if this regresses:** If `window.location.reload()` (or any navigation) is ever reintroduced into the unlock path, `_locked` must be set to `false` before the navigation triggers `beforeunload`. The relay stamping in `bindUnloadRelay` is intentionally unconditional on `_locked`, so any reload while `_locked = true` will cause a spurious logout on the next page load.
+**What to watch for if this regresses:** If `window.location.reload()` (or any navigation) is ever reintroduced into the unlock path, `_locked` must be set to `false` before the navigation triggers `beforeunload`. The relay stamping in `bindUnloadRelay` is intentionally conditional on `_locked`, so any navigation while `_locked = true` will cause a spurious logout on the next page load.
+
+---
+
+## Double login in full logout mode
+
+**Symptom:** With full logout enabled, after the idle timeout fires and the user re-authenticates via the ST login page, they are immediately logged out again and must log in a second time.
+
+**Root cause:** The same `beforeunload` relay mechanism. `lock()` sets `_locked = true` and calls `doLogout()`. `doLogout()` navigates away by setting `window.location.search`, which fires `beforeunload`. The relay handler sees `_locked = true` and stamps a fresh relay key. When the user logs back in and the main page loads, `checkUnloadRelay()` finds a recent key and calls `doLogout()` again — a second forced logout.
+
+**Why the relay is wrong here:** The relay exists to handle overlay mode F5 — if the user refreshes while the overlay is showing, we need to force a server-side logout before the page renders. In full logout mode, the server-side logout already happened before navigation. The relay key is redundant and causes harm.
+
+**Fix:** Set `_locked = false` at the top of `doLogout()`. Since `beforeunload` only stamps the relay when `_locked` is true, the programmatic logout navigation no longer triggers a relay stamp.
+
+**What to watch for if this regresses:** Any code path that navigates while `_locked` is still `true` will trigger the relay. Always set `_locked = false` before any programmatic navigation in both `doLogout()` and any future unlock flows.
