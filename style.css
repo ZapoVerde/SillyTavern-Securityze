@@ -1,6 +1,9 @@
 #securityze-overlay {
     position: fixed;
-    inset: 0;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     z-index: 10000;
     backdrop-filter: blur(calc(var(--SmartThemeBlurStrength) * 2));
     -webkit-backdrop-filter: blur(calc(var(--SmartThemeBlurStrength) * 2));
@@ -8,6 +11,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    /* dvh accounts for collapsing mobile browser chrome */
+    min-height: 100dvh;
 }
 
 #securityze-dialog {
@@ -18,11 +23,27 @@
     padding: 4px;
     background-color: var(--SmartThemeBlurTintColor);
     border-radius: 10px;
+    /* Keep dialog visible when the mobile keyboard pushes the viewport up */
+    max-height: 90dvh;
+    overflow-y: auto;
 }
 
 .securityze-inner {
     gap: 0.75rem;
     padding: 1rem;
+}
+
+.securityze-logo-block {
+    flex-direction: column;
+    align-items: center;
+    margin: 0 auto;
+    gap: 8px;
+}
+
+.securityze-logo {
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
 }
 
 .securityze-no-pw-warning {
