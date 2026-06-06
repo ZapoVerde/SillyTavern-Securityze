@@ -1,5 +1,7 @@
 # SillyTavern-Securityze
 
+**[Released]**
+
 SillyTavern has no built-in inactivity timeout. If you walk away from an open tab, anyone who finds it can read your chats. Securityze fixes that by locking the screen after a period of inactivity and requiring your account password to continue.
 
 ---
