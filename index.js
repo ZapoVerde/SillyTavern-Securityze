@@ -51,7 +51,7 @@ const DEFAULT_MINS     = 5;
     if (Date.now() - last <= timeout) return;
     const cover = document.createElement('div');
     cover.id = 'securityze-early-cover';
-    cover.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;min-height:100dvh;z-index:99998;background:#000;';
+    cover.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;min-height:100dvh;z-index:1000000;background:#000;';
     document.documentElement.appendChild(cover);
 }());
 
